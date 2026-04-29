@@ -22,9 +22,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,7 +34,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun LoginScreen(
-    onShowSignup: () -> Unit
+    onShowSignup: () -> Unit,
+    onLoginSuccess: () -> Unit
 ) {
     var email by rememberSaveable { mutableStateOf("") }
 
@@ -97,7 +98,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         OutlinedButton(
-            onClick = { },
+            onClick = onLoginSuccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -109,7 +110,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedButton(
-            onClick = { },
+            onClick = onLoginSuccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -137,7 +138,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { },
+            onClick = onLoginSuccess,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
