@@ -1,11 +1,9 @@
 package com.example.studyhive_android.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -14,7 +12,6 @@ import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -24,7 +21,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
 fun CreateGroupScreen(
@@ -129,7 +125,7 @@ fun CreateGroupScreen(
                                     value = course,
                                     onValueChange = { course = it },
                                     placeholder = "e.g., PHYS 101",
-                                    leadingIcon = Icons.Outlined.Info // Placeholder for Book icon
+                                    leadingIcon = Icons.Outlined.Info
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -150,13 +146,13 @@ fun CreateGroupScreen(
                             placeholder = "Describe what your group will focus on, your goals, and any prerequisites...",
                             singleLine = false,
                             minLines = 4,
-                            leadingIcon = Icons.Outlined.Info // Placeholder for menu/text icon
+                            leadingIcon = Icons.Outlined.Info
                         )
 
                         HorizontalDivider(color = Color(0xFFF1F5F9))
 
                         // Meeting Details Section
-                        SectionHeader(icon = Icons.Outlined.Schedule, title = "Meeting Details")
+                        SectionHeader(icon = Icons.Outlined.Notifications, title = "Meeting Details")
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(
@@ -215,7 +211,7 @@ fun CreateGroupScreen(
                                     value = schedule,
                                     onValueChange = { schedule = it },
                                     placeholder = "e.g., Thursdays 4:00 PM",
-                                    leadingIcon = Icons.Outlined.Notifications // Placeholder for clock icon
+                                    leadingIcon = Icons.Outlined.Notifications
                                 )
                             }
                         }
@@ -223,7 +219,6 @@ fun CreateGroupScreen(
                 }
             }
 
-            // Footer Actions
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

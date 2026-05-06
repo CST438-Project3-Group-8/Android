@@ -12,6 +12,8 @@ import com.example.studyhive_android.ui.screens.CreateGroupScreen
 import com.example.studyhive_android.ui.screens.DashboardScreen
 import com.example.studyhive_android.ui.screens.LoginScreen
 import com.example.studyhive_android.ui.screens.MyGroupsScreen
+import com.example.studyhive_android.ui.screens.ProfileScreen
+import com.example.studyhive_android.ui.screens.ResetPasswordScreen
 import com.example.studyhive_android.ui.screens.SignupScreen
 import com.example.studyhive_android.ui.theme.StudyHiveAndroidTheme
 
@@ -44,7 +46,22 @@ class MainActivity : ComponentActivity() {
                             onLogout = { currentScreen = "login" },
                             onCreateGroup = { currentScreen = "createGroup" },
                             onBrowseGroups = { currentScreen = "browseGroups" },
-                            onMyGroups = { currentScreen = "myGroups" }
+                            onMyGroups = { currentScreen = "myGroups" },
+                            onProfileClick = { currentScreen = "profile" }
+                        )
+                    }
+
+                    "profile" -> {
+                        ProfileScreen(
+                            onBack = { currentScreen = "dashboard" },
+                            onSecurityClick = { currentScreen = "resetPassword" }
+                        )
+                    }
+
+                    "resetPassword" -> {
+                        ResetPasswordScreen(
+                            onBack = { currentScreen = "profile" },
+                            onResetSuccess = { currentScreen = "profile" }
                         )
                     }
 
