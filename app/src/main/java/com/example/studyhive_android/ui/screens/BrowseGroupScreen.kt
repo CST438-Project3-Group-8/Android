@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun MyGroupsScreen(
-    onBackToDashboard: () -> Unit,
-    onFindMoreGroups: () -> Unit
+fun BrowseGroupScreen(
+    onBackClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -37,8 +35,8 @@ fun MyGroupsScreen(
                 .navigationBarsPadding()
                 .padding(20.dp)
         ) {
-            TextButton(onClick = onBackToDashboard) {
-                Text("← Back to Dashboard")
+            TextButton(onClick = onBackClick) {
+                Text("← Back")
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -53,23 +51,16 @@ fun MyGroupsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "My Groups",
+                        text = "Browse Groups",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold
                     )
 
                     Text(
-                        text = "This screen will show sessions joined or created by the signed-in user.",
+                        text = "This screen will show searchable and browsable study groups from the database.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color(0xFF64748B)
                     )
-                    
-                    Button(
-                        onClick = onFindMoreGroups,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Find More Groups")
-                    }
                 }
             }
         }
