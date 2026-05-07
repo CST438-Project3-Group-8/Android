@@ -1,401 +1,342 @@
 package com.example.studyhive_android.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
-data class MyGroupUi(
-    val courseTag: String,
-    val statusTag: String,
-    val modeTag: String,
-    val title: String,
-    val description: String,
-    val membersLabel: String,
-    val nextSessionTitle: String,
-    val nextSessionTime: String
-)
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun MyGroupsScreen(
-    groups: List<MyGroupUi> = sampleMyGroups(),
-    onBackToDashboard: () -> Unit = {},
-    onFindMoreGroups: () -> Unit = {}
+    onBackToDashboard: () -> Unit,
+    onFindMoreGroups: () -> Unit,
+    onProfileClick: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF3F4F6))
-            .padding(horizontal = 16.dp, vertical = 16.dp)
-            .navigationBarsPadding(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            MyGroupsHeader(
-                onBackToDashboard = onBackToDashboard
-            )
-        }
-
-        item {
-            TitleSection(
-                onFindMoreGroups = onFindMoreGroups
-            )
-        }
-
-        items(groups) { group ->
-            MyGroupCard(group = group)
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-    }
-}
-
-@Composable
-private fun MyGroupsHeader(
-    onBackToDashboard: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .background(
-                        color = Color(0xFF2563EB),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-            )
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Text(
-                text = "StudyHive",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF0F172A)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        TextButton(onClick = onBackToDashboard) {
-            Text(
-                text = "Dashboard",
-                color = Color(0xFF64748B)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TitleSection(
-    onFindMoreGroups: () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF8FAFC)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
-            Text(
-                text = "My Groups",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF0F172A)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Manage your study groups and upcoming sessions.",
-                style = MaterialTheme.typography.bodyLarge,
-                color = Color(0xFF64748B)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onFindMoreGroups,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB)
-                )
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Find More Groups")
+                TextButton(onClick = onBackToDashboard) {
+                    Text("← Back", color = Color(0xFF64748B), fontWeight = FontWeight.Bold)
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(color = Color.White, shape = RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+                        .clickable { onProfileClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Person,
+                        contentDescription = "Profile",
+                        tint = Color(0xFF2563EB)
+                    )
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "My Groups",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF0F172A)
+                            )
+                            
+                            Button(
+                                onClick = onFindMoreGroups,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Text("Find More", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            }
+                        }
+                        Text(
+                            text = "Manage your study groups and upcoming sessions.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+                }
+
+                // Sample Data
+                items(sampleMyGroups) { group ->
+                    MyGroupCard(group)
+                }
+                
+                item {
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
             }
         }
     }
 }
 
 @Composable
-private fun MyGroupCard(
-    group: MyGroupUi
-) {
+private fun MyGroupCard(group: MyGroupData) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp)
-        ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            // Tags
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AssistChip(
-                    onClick = { },
-                    label = { Text(group.courseTag) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = Color(0xFFF1F5F9)
-                    )
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                AssistChip(
-                    onClick = { },
-                    label = { Text(group.statusTag) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = Color(0xFFDCFCE7)
-                    )
-                )
-
+                Tag(text = group.course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
+                Tag(text = "● ${group.status}", backgroundColor = Color(0xFFF0FDF4), textColor = Color(0xFF16A34A))
                 Spacer(modifier = Modifier.weight(1f))
-
-                AssistChip(
-                    onClick = { },
-                    label = { Text(group.modeTag) },
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = if (group.modeTag == "Online") {
-                            Color(0xFFDBEAFE)
-                        } else {
-                            Color(0xFFFFEDD5)
-                        }
-                    )
+                Tag(
+                    text = if (group.isOnline) "💻 Online" else "📍 In-Person",
+                    backgroundColor = if (group.isOnline) Color(0xFFEFF6FF) else Color(0xFFFFF7ED),
+                    textColor = if (group.isOnline) Color(0xFF2563EB) else Color(0xFFC2410C)
                 )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = group.title,
+                text = group.name,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A)
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = group.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF64748B)
+                color = Color(0xFF64748B),
+                maxLines = 3
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            MembersRow(membersLabel = group.membersLabel)
+            // Footer (Members)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MemberAvatars(count = group.memberCount)
+                Spacer(modifier = Modifier.weight(1f))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Groups,
+                        contentDescription = null,
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${group.memberCount} Members",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF64748B),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            HorizontalDivider()
+            // Next Session Box
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF8FAFC),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.White, RoundedCornerShape(10.dp))
+                            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            tint = Color(0xFF2563EB),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-            NextSessionCard(
-                title = group.nextSessionTitle,
-                time = group.nextSessionTime
-            )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "NEXT SESSION",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF94A3B8),
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = group.nextSessionName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0F172A)
+                        )
+                        Text(
+                            text = group.nextSessionTime,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFCBD5E1),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun MembersRow(
-    membersLabel: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AvatarStack()
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = membersLabel,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Color(0xFF64748B)
-        )
-    }
-}
-
-@Composable
-private fun AvatarStack() {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        SmallAvatar(Color(0xFF93C5FD))
-        SmallAvatar(Color(0xFFC4B5FD))
-        SmallAvatar(Color(0xFFFCA5A5))
-        MoreMembersBubble("+2")
-    }
-}
-
-@Composable
-private fun SmallAvatar(color: Color) {
-    Box(
-        modifier = Modifier
-            .padding(end = 6.dp)
-            .size(28.dp)
-            .background(color = color, shape = CircleShape)
-    )
-}
-
-@Composable
-private fun MoreMembersBubble(text: String) {
-    Box(
-        modifier = Modifier
-            .background(
-                color = Color(0xFFF1F5F9),
-                shape = CircleShape
-            )
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+private fun Tag(text: String, backgroundColor: Color, textColor: Color) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = backgroundColor
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color(0xFF475569),
-            fontWeight = FontWeight.Medium
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = textColor
         )
     }
 }
 
 @Composable
-private fun NextSessionCard(
-    title: String,
-    time: String
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+private fun MemberAvatars(count: Int) {
+    Row {
+        repeat(minOf(count, 3)) { i ->
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        color = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    ),
+                    .size(28.dp)
+                    .offset(x = (i * -8).dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE2E8F0))
+                    .border(2.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Person,
+                    contentDescription = null,
+                    tint = Color(0xFF94A3B8),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        if (count > 3) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .offset(x = (3 * -8).dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF1F5F9))
+                    .border(2.dp, Color.White, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "📅",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "NEXT SESSION",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(0xFF94A3B8),
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    text = "+${count - 3}",
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF64748B)
                 )
             }
-
-            Text(
-                text = "→",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color(0xFF94A3B8)
-            )
         }
     }
 }
 
-private fun sampleMyGroups(): List<MyGroupUi> {
-    return listOf(
-        MyGroupUi(
-            courseTag = "CS 301",
-            statusTag = "Active",
-            modeTag = "In-Person",
-            title = "Algorithm Enthusiasts",
-            description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy methods. Great for interview prep!",
-            membersLabel = "5 Members",
-            nextSessionTitle = "Dynamic Programming Review",
-            nextSessionTime = "Today, 4:00 PM · Main Library, Room 402"
-        ),
-        MyGroupUi(
-            courseTag = "MATH 220",
-            statusTag = "Active",
-            modeTag = "Online",
-            title = "Calculus III Prep",
-            description = "Preparing for the upcoming midterms. Bring your problem sets, and we'll work through the toughest derivatives together.",
-            membersLabel = "12 Members",
-            nextSessionTitle = "Midterm 2 Practice Exam",
-            nextSessionTime = "Tomorrow, 7:00 PM · Zoom"
-        )
+private data class MyGroupData(
+    val course: String,
+    val status: String,
+    val isOnline: Boolean,
+    val name: String,
+    val description: String,
+    val memberCount: Int,
+    val nextSessionName: String,
+    val nextSessionTime: String
+)
+
+private val sampleMyGroups = listOf(
+    MyGroupData(
+        course = "CS 301",
+        status = "Active",
+        isOnline = false,
+        name = "Algorithm Enthusiasts",
+        description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy algorithms. Great for interview prep!",
+        memberCount = 5,
+        nextSessionName = "Dynamic Programming Review",
+        nextSessionTime = "Today, 4:00 PM - Main Library, Room 402"
+    ),
+    MyGroupData(
+        course = "MATH 220",
+        status = "Active",
+        isOnline = true,
+        name = "Calculus III Prep",
+        description = "Preparing for the upcoming midterms. Bring your problem sets, and we'll work through the toughest derivatives together.",
+        memberCount = 12,
+        nextSessionName = "Midterm 2 Practice Exam",
+        nextSessionTime = "Tomorrow, 7:00 PM - Zoom"
     )
-}
+)

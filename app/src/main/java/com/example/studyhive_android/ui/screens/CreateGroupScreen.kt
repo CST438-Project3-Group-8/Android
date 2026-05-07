@@ -1,343 +1,330 @@
 package com.example.studyhive_android.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun CreateGroupScreen(
-    onBack: () -> Unit = {},
-    onCancel: () -> Unit = {},
-    onCreateGroup: () -> Unit = {}
+    onBack: () -> Unit,
+    onCancel: () -> Unit,
+    onCreateGroup: () -> Unit
 ) {
     var groupName by rememberSaveable { mutableStateOf("") }
     var course by rememberSaveable { mutableStateOf("") }
     var maxMembers by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
+    var meetingMode by rememberSaveable { mutableStateOf("In-Person") }
     var location by rememberSaveable { mutableStateOf("") }
     var schedule by rememberSaveable { mutableStateOf("") }
-    var meetingMode by rememberSaveable { mutableStateOf("In-Person") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF3F4F6))
-            .verticalScroll(rememberScrollState())
-            .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF8FAFC) // Very light blue/gray background
     ) {
-        CreateGroupHeader(onBack = onBack)
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Create a Study Group",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFF0F172A)
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "Start a new group to study, collaborate, and prep together.",
-            style = MaterialTheme.typography.bodyLarge,
-            color = Color(0xFF64748B)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
+                .statusBarsPadding()
+                .padding(horizontal = 20.dp)
         ) {
-            Column(modifier = Modifier.padding(18.dp)) {
-                Text(
-                    text = "Basic Information",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
-                )
+            // Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    onClick = onBack,
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            modifier = Modifier.size(20.dp),
+                            tint = Color(0xFF64748B)
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(18.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                CreateGroupFieldLabel("Group Name")
-                OutlinedTextField(
-                    value = groupName,
-                    onValueChange = { groupName = it },
-                    placeholder = { Text("e.g., Finals Prep - Physics 101") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
-                )
+                Column {
+                    Text(
+                        text = "Create a Study Group",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "Start a new group to study, collaborate, and prep together.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CreateGroupFieldLabel("Course or Subject")
-                OutlinedTextField(
-                    value = course,
-                    onValueChange = { course = it },
-                    placeholder = { Text("e.g., PHYS 101") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CreateGroupFieldLabel("Maximum Members")
-                OutlinedTextField(
-                    value = maxMembers,
-                    onValueChange = { maxMembers = it },
-                    placeholder = { Text("e.g., 2 - 5 members") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CreateGroupFieldLabel("Description")
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    placeholder = { Text("Describe what your group will focus on, your goals, and any prerequisites...") },
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp),
-                    shape = RoundedCornerShape(16.dp)
-                )
+                        .padding(bottom = 24.dp),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                    ) {
+                        // Basic Information Section
+                        SectionHeader(icon = Icons.Outlined.Info, title = "Basic Information")
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        FormField(
+                            label = "Group Name",
+                            value = groupName,
+                            onValueChange = { groupName = it },
+                            placeholder = "e.g., Finals Prep - Physics 101"
+                        )
 
-                HorizontalDivider()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                FormField(
+                                    label = "Course or Subject",
+                                    value = course,
+                                    onValueChange = { course = it },
+                                    placeholder = "e.g., PHYS 101",
+                                    leadingIcon = Icons.Outlined.Info
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                FormField(
+                                    label = "Maximum Members",
+                                    value = maxMembers,
+                                    onValueChange = { maxMembers = it },
+                                    placeholder = "2 - 5 members",
+                                    leadingIcon = Icons.Outlined.AccountCircle
+                                )
+                            }
+                        }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                        FormField(
+                            label = "Description",
+                            value = description,
+                            onValueChange = { description = it },
+                            placeholder = "Describe what your group will focus on, your goals, and any prerequisites...",
+                            singleLine = false,
+                            minLines = 4,
+                            leadingIcon = Icons.Outlined.Info
+                        )
 
-                Text(
-                    text = "Meeting Details",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0F172A)
-                )
+                        HorizontalDivider(color = Color(0xFFF1F5F9))
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        // Meeting Details Section
+                        SectionHeader(icon = Icons.Outlined.Notifications, title = "Meeting Details")
 
-                CreateGroupFieldLabel("Meeting Mode")
-                MeetingModeSelector(
-                    selectedMode = meetingMode,
-                    onModeSelected = { meetingMode = it }
-                )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Meeting Mode",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F172A)
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                listOf("In-Person", "Online", "Hybrid").forEach { mode ->
+                                    val isSelected = meetingMode == mode
+                                    Surface(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp)
+                                            .clickable { meetingMode = mode },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isSelected) Color(0xFFEFF6FF) else Color.White,
+                                        border = BorderStroke(
+                                            width = 1.dp,
+                                            color = if (isSelected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
+                                        )
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = mode,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color(0xFF2563EB) else Color(0xFF64748B)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CreateGroupFieldLabel("Location / Link")
-                OutlinedTextField(
-                    value = location,
-                    onValueChange = { location = it },
-                    placeholder = { Text("e.g., Main Library") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                CreateGroupFieldLabel("Schedule")
-                OutlinedTextField(
-                    value = schedule,
-                    onValueChange = { schedule = it },
-                    placeholder = { Text("e.g., Thursdays 4:00 PM") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    singleLine = true
-                )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                FormField(
+                                    label = "Location / Link",
+                                    value = location,
+                                    onValueChange = { location = it },
+                                    placeholder = "e.g., Main Library",
+                                    leadingIcon = Icons.Outlined.LocationOn
+                                )
+                            }
+                            Box(modifier = Modifier.weight(1f)) {
+                                FormField(
+                                    label = "Schedule",
+                                    value = schedule,
+                                    onValueChange = { schedule = it },
+                                    placeholder = "e.g., Thursdays 4:00 PM",
+                                    leadingIcon = Icons.Outlined.Notifications
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
-        ) {
-            TextButton(onClick = onCancel) {
-                Text(
-                    text = "Cancel",
-                    color = Color(0xFF64748B),
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Button(
-                onClick = onCreateGroup,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2563EB)
-                )
-            ) {
-                Text("Create Group")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-    }
-}
-
-@Composable
-private fun CreateGroupHeader(
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(42.dp)
-                    .background(
-                        color = Color(0xFF2563EB),
-                        shape = RoundedCornerShape(14.dp)
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.weight(1f))
+                
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.height(52.dp).padding(horizontal = 8.dp),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F172A)
                     )
-            )
+                }
 
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Text(
-                text = "StudyHive",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF0F172A)
-            )
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        TextButton(onClick = onBack) {
-            Text(
-                text = "Back",
-                color = Color(0xFF64748B)
-            )
+                Button(
+                    onClick = onCreateGroup,
+                    modifier = Modifier
+                        .height(52.dp)
+                        .padding(horizontal = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                ) {
+                    Text(
+                        text = "Create Group",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun CreateGroupFieldLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        fontWeight = FontWeight.SemiBold,
-        color = Color(0xFF334155),
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-}
-
-@Composable
-private fun MeetingModeSelector(
-    selectedMode: String,
-    onModeSelected: (String) -> Unit
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            MeetingModeButton(
-                text = "In-Person",
-                selected = selectedMode == "In-Person",
-                modifier = Modifier.weight(1f),
-                onClick = { onModeSelected("In-Person") }
-            )
-
-            MeetingModeButton(
-                text = "Online",
-                selected = selectedMode == "Online",
-                modifier = Modifier.weight(1f),
-                onClick = { onModeSelected("Online") }
-            )
-        }
-
-        MeetingModeButton(
-            text = "Hybrid",
-            selected = selectedMode == "Hybrid",
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { onModeSelected("Hybrid") }
+private fun SectionHeader(icon: ImageVector, title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color(0xFF2563EB),
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0F172A)
         )
     }
 }
 
 @Composable
-private fun MeetingModeButton(
-    text: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
+private fun FormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    leadingIcon: ImageVector? = null,
+    singleLine: Boolean = true,
+    minLines: Int = 1
 ) {
-    val borderColor = if (selected) Color(0xFF2563EB) else Color(0xFFE2E8F0)
-    val backgroundColor = if (selected) Color(0xFFEFF6FF) else Color.White
-    val textColor = if (selected) Color(0xFF2563EB) else Color(0xFF475569)
-
-    Box(
-        modifier = modifier
-            .background(
-                color = backgroundColor,
-                shape = RoundedCornerShape(16.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0F172A)
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFF94A3B8)
+                )
+            },
+            leadingIcon = leadingIcon?.let {
+                {
+                    Icon(
+                        imageVector = it,
+                        contentDescription = null,
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            },
+            singleLine = singleLine,
+            minLines = minLines,
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFF8FAFC),
+                unfocusedContainerColor = Color(0xFFF8FAFC),
+                focusedBorderColor = Color(0xFFE2E8F0),
+                unfocusedBorderColor = Color(0xFFE2E8F0),
             )
-            .border(
-                width = 1.5.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(vertical = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        TextButton(
-            onClick = onClick
-        ) {
-            Text(
-                text = text,
-                color = textColor,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        )
     }
 }
