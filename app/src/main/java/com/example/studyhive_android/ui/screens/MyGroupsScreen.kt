@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,13 +23,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.model.SessionDto
+import com.example.studyhive_android.data.model.StudyGroupDto
+import com.example.studyhive_android.ui.viewmodels.MyGroupsViewModel
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @Composable
 fun MyGroupsScreen(
+    currentUserId: String?,
     onBackToDashboard: () -> Unit,
     onFindMoreGroups: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    myGroupsViewModel: MyGroupsViewModel = viewModel()
 ) {
+    val uiState = myGroupsViewModel.uiState.collectAsStateWithLifecycle().value
+
+    LaunchedEffect(currentUserId) {
+        myGroupsViewModel.load(currentUserId)
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color(0xFFF8FAFC)
@@ -103,9 +120,35 @@ fun MyGroupsScreen(
                     }
                 }
 
-                // Sample Data
-                items(sampleMyGroups) { group ->
-                    MyGroupCard(group)
+                if (uiState.loading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+
+                uiState.error?.let { error ->
+                    item {
+                        ErrorCard(message = error)
+                    }
+                }
+
+                if (!uiState.loading && uiState.groups.isEmpty()) {
+                    item {
+                        EmptyMyGroupsCard("You have not joined or created any groups yet.")
+                    }
+                }
+
+                items(uiState.groups, key = { it.id }) { group ->
+                    MyGroupCard(
+                        group = group,
+                        course = uiState.courseMap[group.courseId].orEmpty().ifBlank { "No Course" },
+                        nextSession = uiState.nextSessionMap[group.id]
+                    )
                 }
                 
                 item {
@@ -117,7 +160,8 @@ fun MyGroupsScreen(
 }
 
 @Composable
-private fun MyGroupCard(group: MyGroupData) {
+private fun MyGroupCard(group: StudyGroupDto, course: String, nextSession: SessionDto?) {
+    val mode = group.meetingMode.orEmpty().ifBlank { "Mode TBD" }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -132,20 +176,20 @@ private fun MyGroupCard(group: MyGroupData) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Tag(text = group.course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
-                Tag(text = "● ${group.status}", backgroundColor = Color(0xFFF0FDF4), textColor = Color(0xFF16A34A))
+                Tag(text = course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
+                Tag(text = "Active", backgroundColor = Color(0xFFF0FDF4), textColor = Color(0xFF16A34A))
                 Spacer(modifier = Modifier.weight(1f))
                 Tag(
-                    text = if (group.isOnline) "💻 Online" else "📍 In-Person",
-                    backgroundColor = if (group.isOnline) Color(0xFFEFF6FF) else Color(0xFFFFF7ED),
-                    textColor = if (group.isOnline) Color(0xFF2563EB) else Color(0xFFC2410C)
+                    text = mode,
+                    backgroundColor = if (mode == "Online") Color(0xFFEFF6FF) else Color(0xFFFFF7ED),
+                    textColor = if (mode == "Online") Color(0xFF2563EB) else Color(0xFFC2410C)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = group.name,
+                text = group.title.orEmpty().ifBlank { "Untitled Group" },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A)
@@ -154,7 +198,7 @@ private fun MyGroupCard(group: MyGroupData) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = group.description,
+                text = group.description.orEmpty().ifBlank { "No description provided." },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF64748B),
                 maxLines = 3
@@ -167,7 +211,7 @@ private fun MyGroupCard(group: MyGroupData) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MemberAvatars(count = group.memberCount)
+                MemberAvatars(count = 0)
                 Spacer(modifier = Modifier.weight(1f))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -178,7 +222,7 @@ private fun MyGroupCard(group: MyGroupData) {
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "${group.memberCount} Members",
+                        text = "Max ${group.maxMembers ?: "unlimited"} members",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color(0xFF64748B),
                         fontWeight = FontWeight.Medium
@@ -225,13 +269,14 @@ private fun MyGroupCard(group: MyGroupData) {
                             letterSpacing = 1.sp
                         )
                         Text(
-                            text = group.nextSessionName,
+                            text = nextSession?.title ?: "No upcoming session",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF0F172A)
                         )
                         Text(
-                            text = group.nextSessionTime,
+                            text = nextSession?.let { "${formatDateTime(it.scheduledAt)} - ${it.location ?: group.location ?: "Location TBD"}" }
+                                ?: "Create a session to get started",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF64748B)
                         )
@@ -246,6 +291,47 @@ private fun MyGroupCard(group: MyGroupData) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ErrorCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFEF2F2)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFFB91C1C),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun EmptyMyGroupsCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            color = Color(0xFF64748B),
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+}
+
+private fun formatDateTime(value: String): String {
+    return try {
+        OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
+    } catch (_: DateTimeParseException) {
+        value
     }
 }
 
@@ -307,36 +393,3 @@ private fun MemberAvatars(count: Int) {
     }
 }
 
-private data class MyGroupData(
-    val course: String,
-    val status: String,
-    val isOnline: Boolean,
-    val name: String,
-    val description: String,
-    val memberCount: Int,
-    val nextSessionName: String,
-    val nextSessionTime: String
-)
-
-private val sampleMyGroups = listOf(
-    MyGroupData(
-        course = "CS 301",
-        status = "Active",
-        isOnline = false,
-        name = "Algorithm Enthusiasts",
-        description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy algorithms. Great for interview prep!",
-        memberCount = 5,
-        nextSessionName = "Dynamic Programming Review",
-        nextSessionTime = "Today, 4:00 PM - Main Library, Room 402"
-    ),
-    MyGroupData(
-        course = "MATH 220",
-        status = "Active",
-        isOnline = true,
-        name = "Calculus III Prep",
-        description = "Preparing for the upcoming midterms. Bring your problem sets, and we'll work through the toughest derivatives together.",
-        memberCount = 12,
-        nextSessionName = "Midterm 2 Practice Exam",
-        nextSessionTime = "Tomorrow, 7:00 PM - Zoom"
-    )
-)

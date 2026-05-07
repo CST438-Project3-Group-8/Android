@@ -10,22 +10,37 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.ui.viewmodels.DashboardViewModel
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 
 @Composable
 fun DashboardScreen(
     userName: String,
+    currentUserId: String?,
     onLogout: () -> Unit,
     onCreateGroup: () -> Unit,
     onBrowseGroups: () -> Unit,
     onMyGroups: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    dashboardViewModel: DashboardViewModel = viewModel()
 ) {
+    val uiState = dashboardViewModel.uiState.collectAsStateWithLifecycle().value
+
+    LaunchedEffect(currentUserId) {
+        dashboardViewModel.load(currentUserId)
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
         Column(
             modifier = Modifier
@@ -79,7 +94,7 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "You have 2 study sessions coming up across your groups.",
+                        "You have ${uiState.upcomingSessions.size} study sessions coming up across your groups.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color(0xFF64748B)
                     )
@@ -106,14 +121,28 @@ fun DashboardScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            if (uiState.loading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            uiState.error?.let { error ->
+                ErrorCard(message = error)
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
             // Stat cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(modifier = Modifier.weight(1f), label = "Groups", value = "2", bg = Color(0xFFDBEAFE))
-                StatCard(modifier = Modifier.weight(1f), label = "Sessions", value = "2", bg = Color(0xFFFEF3C7))
-                StatCard(modifier = Modifier.weight(1f), label = "Courses", value = "4", bg = Color(0xFFDCFCE7))
+                StatCard(modifier = Modifier.weight(1f), label = "Groups", value = uiState.groups.size.toString(), bg = Color(0xFFDBEAFE))
+                StatCard(modifier = Modifier.weight(1f), label = "Sessions", value = uiState.upcomingSessions.size.toString(), bg = Color(0xFFFEF3C7))
+                StatCard(modifier = Modifier.weight(1f), label = "Courses", value = uiState.totalCourses.toString(), bg = Color(0xFFDCFCE7))
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -122,21 +151,19 @@ fun DashboardScreen(
             SectionHeader(title = "Upcoming Sessions", actionLabel = "View My Groups", onAction = onMyGroups)
             Spacer(modifier = Modifier.height(12.dp))
 
-            UpcomingSessionCard(
-                time = "Today, 4:00 PM",
-                title = "Dynamic Programming Review",
-                group = "Algorithm Enthusiasts",
-                location = "Main Library, Room 402"
-            ) { onMyGroups() }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            UpcomingSessionCard(
-                time = "Tomorrow, 7:00 PM",
-                title = "Midterm 2 Practice Exam",
-                group = "Calculus III Prep",
-                location = "Zoom"
-            ) { onMyGroups() }
+            if (!uiState.loading && uiState.upcomingSessions.isEmpty()) {
+                EmptyCard("No upcoming sessions yet.")
+            } else {
+                uiState.upcomingSessions.forEachIndexed { index, (session, group) ->
+                    if (index > 0) Spacer(modifier = Modifier.height(12.dp))
+                    UpcomingSessionCard(
+                        time = formatDateTime(session.scheduledAt),
+                        title = session.title,
+                        group = group.title.orEmpty().ifBlank { "Untitled Group" },
+                        location = session.location.orEmpty().ifBlank { group.location.orEmpty().ifBlank { "Location TBD" } }
+                    ) { onMyGroups() }
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -144,22 +171,62 @@ fun DashboardScreen(
             SectionHeader(title = "Your Study Groups", actionLabel = "View All", onAction = onMyGroups)
             Spacer(modifier = Modifier.height(12.dp))
 
-            DashboardGroupCard(
-                course = "CS 301",
-                mode = "In-Person",
-                title = "Algorithm Enthusiasts",
-                description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy algorithms.",
-                onClick = onMyGroups
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            DashboardGroupCard(
-                course = "MATH 220",
-                mode = "Online",
-                title = "Calculus III Prep",
-                description = "Preparing for the upcoming midterms. Bring your problem sets and work through tough derivatives.",
-                onClick = onMyGroups
-            )
+            if (!uiState.loading && uiState.groups.isEmpty()) {
+                EmptyCard("You have not joined or created any groups yet.")
+            } else {
+                uiState.groups.take(3).forEachIndexed { index, group ->
+                    if (index > 0) Spacer(modifier = Modifier.height(12.dp))
+                    DashboardGroupCard(
+                        course = uiState.courseMap[group.courseId].orEmpty().ifBlank { "No Course" },
+                        mode = group.meetingMode.orEmpty().ifBlank { "Mode TBD" },
+                        title = group.title.orEmpty().ifBlank { "Untitled Group" },
+                        description = group.description.orEmpty().ifBlank { "No description provided." },
+                        onClick = onMyGroups
+                    )
+                }
+            }
         }
+    }
+}
+
+private fun formatDateTime(value: String): String {
+    return try {
+        OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern("MMM d, h:mm a"))
+    } catch (_: DateTimeParseException) {
+        value
+    }
+}
+
+@Composable
+private fun ErrorCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFEF2F2)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFFB91C1C),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun EmptyCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            color = Color(0xFF64748B),
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

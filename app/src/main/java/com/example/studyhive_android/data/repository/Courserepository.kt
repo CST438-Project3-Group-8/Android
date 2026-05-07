@@ -14,6 +14,9 @@ class CourseRepository {
     /** GET /api/courses */
     suspend fun getCourses(): List<CourseDto> {
         val response = api.getCourses()
+        if (!response.isSuccessful) {
+            throw IllegalStateException("Failed to load courses: HTTP ${response.code()}")
+        }
         return response.body() ?: emptyList()
     }
 }

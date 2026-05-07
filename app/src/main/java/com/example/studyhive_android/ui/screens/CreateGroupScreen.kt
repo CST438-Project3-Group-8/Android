@@ -21,20 +21,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.model.CourseDto
+import com.example.studyhive_android.ui.viewmodels.CreateGroupViewModel
 
 @Composable
 fun CreateGroupScreen(
     onBack: () -> Unit,
     onCancel: () -> Unit,
-    onCreateGroup: () -> Unit
+    onCreateGroup: () -> Unit,
+    createGroupViewModel: CreateGroupViewModel = viewModel()
 ) {
     var groupName by rememberSaveable { mutableStateOf("") }
-    var course by rememberSaveable { mutableStateOf("") }
+    var selectedCourseId by rememberSaveable { mutableStateOf<Int?>(null) }
     var maxMembers by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var meetingMode by rememberSaveable { mutableStateOf("In-Person") }
     var location by rememberSaveable { mutableStateOf("") }
     var schedule by rememberSaveable { mutableStateOf("") }
+    val uiState = createGroupViewModel.uiState.collectAsStateWithLifecycle().value
+
+    LaunchedEffect(uiState.createdGroupId) {
+        if (uiState.createdGroupId != null) {
+            onCreateGroup()
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -120,12 +132,11 @@ fun CreateGroupScreen(
                             horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Box(modifier = Modifier.weight(1f)) {
-                                FormField(
-                                    label = "Course or Subject",
-                                    value = course,
-                                    onValueChange = { course = it },
-                                    placeholder = "e.g., PHYS 101",
-                                    leadingIcon = Icons.Outlined.Info
+                                CourseSelector(
+                                    courses = uiState.courses,
+                                    selectedCourseId = selectedCourseId,
+                                    loading = uiState.loadingCourses,
+                                    onCourseSelected = { selectedCourseId = it }
                                 )
                             }
                             Box(modifier = Modifier.weight(1f)) {
@@ -150,6 +161,21 @@ fun CreateGroupScreen(
                         )
 
                         HorizontalDivider(color = Color(0xFFF1F5F9))
+
+                        uiState.error?.let {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFEF2F2)
+                            ) {
+                                Text(
+                                    text = it,
+                                    modifier = Modifier.padding(12.dp),
+                                    color = Color(0xFFB91C1C),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
 
                         // Meeting Details Section
                         SectionHeader(icon = Icons.Outlined.Notifications, title = "Meeting Details")
@@ -241,7 +267,17 @@ fun CreateGroupScreen(
                 }
 
                 Button(
-                    onClick = onCreateGroup,
+                    onClick = {
+                        createGroupViewModel.createGroup(
+                            title = groupName,
+                            description = description,
+                            courseId = selectedCourseId,
+                            location = location,
+                            meetingMode = meetingMode,
+                            maxMembers = maxMembers.toIntOrNull()
+                        )
+                    },
+                    enabled = !uiState.submitting,
                     modifier = Modifier
                         .height(52.dp)
                         .padding(horizontal = 4.dp),
@@ -249,10 +285,91 @@ fun CreateGroupScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
                 ) {
                     Text(
-                        text = "Create Group",
+                        text = if (uiState.submitting) "Creating..." else "Create Group",
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseSelector(
+    courses: List<CourseDto>,
+    selectedCourseId: Int?,
+    loading: Boolean,
+    onCourseSelected: (Int?) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selected = courses.firstOrNull { it.id == selectedCourseId }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Course or Subject",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0F172A)
+        )
+        Box {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clickable(enabled = !loading) { expanded = true },
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF8FAFC),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = null,
+                        tint = Color(0xFF94A3B8),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = selected?.let { "${it.code} - ${it.title}" }
+                            ?: if (loading) "Loading courses..." else "Select a course",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (selected == null) Color(0xFF94A3B8) else Color(0xFF0F172A),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.heightIn(max = 320.dp)
+            ) {
+                if (courses.isEmpty() && !loading) {
+                    DropdownMenuItem(
+                        text = { Text("No courses found") },
+                        onClick = { expanded = false },
+                        enabled = false
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = { Text("No course") },
+                        onClick = {
+                            onCourseSelected(null)
+                            expanded = false
+                        }
+                    )
+                    courses.forEach { course ->
+                        DropdownMenuItem(
+                            text = { Text("${course.code} - ${course.title}") },
+                            onClick = {
+                                onCourseSelected(course.id)
+                                expanded = false
+                            }
+                        )
+                    }
                 }
             }
         }
