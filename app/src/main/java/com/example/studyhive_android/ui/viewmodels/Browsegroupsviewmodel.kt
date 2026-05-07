@@ -25,6 +25,7 @@ class BrowseGroupsViewModel(
         val error: String? = null,
         val allGroups: List<StudyGroupDto> = emptyList(),
         val courseMap: Map<Int, String> = emptyMap(),
+        val joinedGroupIds: Set<Int> = emptySet(),
         val searchQuery: String = "",
         val modeFilter: String = "All",
         val joiningGroupId: Int? = null,
@@ -35,9 +36,13 @@ class BrowseGroupsViewModel(
                 return allGroups.filter { group ->
                     val matchSearch = searchQuery.isBlank() ||
                             group.title.orEmpty().contains(searchQuery, ignoreCase = true) ||
-                            group.description.orEmpty().contains(searchQuery, ignoreCase = true)
-                    val matchMode = modeFilter == "All" || group.meetingMode == modeFilter
-                    matchSearch && matchMode
+                            group.description.orEmpty().contains(searchQuery, ignoreCase = true) ||
+                            courseMap[group.courseId].orEmpty().contains(searchQuery, ignoreCase = true)
+                    val courseCode = courseMap[group.courseId].orEmpty()
+                    val matchFilter = modeFilter == "All" ||
+                            group.meetingMode == modeFilter ||
+                            courseCode == modeFilter
+                    matchSearch && matchFilter
                 }
             }
     }
@@ -50,11 +55,13 @@ class BrowseGroupsViewModel(
             _uiState.value = _uiState.value.copy(loading = true, error = null)
             try {
                 val groups  = groupRepo.getGroups()
+                val joinedGroups = groupRepo.getMyJoinedGroups()
                 val courses = courseRepo.getCourses()
                 _uiState.value = _uiState.value.copy(
                     loading   = false,
                     allGroups = groups,
-                    courseMap = courses.associate { it.id to it.code }
+                    courseMap = courses.associate { it.id to it.code },
+                    joinedGroupIds = joinedGroups.map { it.id }.toSet()
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -78,8 +85,10 @@ class BrowseGroupsViewModel(
             _uiState.value = _uiState.value.copy(joiningGroupId = groupId, actionMessage = null)
             groupRepo.joinGroup(groupId)
                 .onSuccess {
+                    val joinedIds = _uiState.value.joinedGroupIds + groupId
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
+                        joinedGroupIds = joinedIds,
                         actionMessage  = "Joined group!"
                     )
                 }
@@ -97,8 +106,10 @@ class BrowseGroupsViewModel(
             _uiState.value = _uiState.value.copy(joiningGroupId = groupId, actionMessage = null)
             groupRepo.leaveGroup(groupId)
                 .onSuccess {
+                    val joinedIds = _uiState.value.joinedGroupIds - groupId
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
+                        joinedGroupIds = joinedIds,
                         actionMessage  = "Left group."
                     )
                 }

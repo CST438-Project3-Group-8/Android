@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,14 +26,43 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.model.CourseDto
+import com.example.studyhive_android.ui.viewmodels.ProfileViewModel
 
 @Composable
 fun ProfileScreen(
     displayName: String,
     email: String,
     onBack: () -> Unit,
-    onSecurityClick: () -> Unit
+    onSecurityClick: () -> Unit,
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
+    val uiState = profileViewModel.uiState.collectAsStateWithLifecycle().value
+    val profile = uiState.profile
+    var nameField by rememberSaveable { mutableStateOf(displayName) }
+    var majorField by rememberSaveable { mutableStateOf("") }
+    var bioField by rememberSaveable { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        profileViewModel.load()
+    }
+
+    LaunchedEffect(profile) {
+        profile?.let {
+            nameField = it.name
+            majorField = it.major.orEmpty()
+            bioField = it.bio.orEmpty()
+        }
+    }
+
+    LaunchedEffect(uiState.accountDeleted) {
+        if (uiState.accountDeleted) {
+            onBack()
+        }
+    }
+
     Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF8FAFC)) {
         Column(
             modifier = Modifier
@@ -60,15 +90,87 @@ fun ProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            ProfileHeaderCard(displayName)
+            if (uiState.loading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            uiState.loadError?.let {
+                ErrorCard(it)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            uiState.saveError?.let {
+                ErrorCard(it)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            if (uiState.saveSuccess) {
+                InfoCard("Profile saved.", onClick = profileViewModel::clearSaveSuccess)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            ProfileHeaderCard(
+                displayName = profile?.name ?: displayName,
+                major = profile?.major.orEmpty().ifBlank { "Major not set" },
+                bio = profile?.bio.orEmpty().ifBlank { "Add a bio to tell classmates what you are studying." }
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            PersonalDetailsCard(displayName, email)
+            PersonalDetailsCard(
+                name = nameField,
+                email = profile?.email ?: email,
+                major = majorField,
+                bio = bioField,
+                saving = uiState.saving,
+                onNameChange = { nameField = it },
+                onMajorChange = { majorField = it },
+                onBioChange = { bioField = it },
+                onSave = { profileViewModel.saveProfile(nameField, bioField, majorField) }
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            MyCoursesCard()
+            MyCoursesCard(
+                myCourses = uiState.myCourses,
+                availableCourses = uiState.availableToAdd,
+                courseError = uiState.courseError,
+                onAddCourse = profileViewModel::addCourse,
+                onRemoveCourse = profileViewModel::removeCourse
+            )
             Spacer(modifier = Modifier.height(16.dp))
-            DeleteAccountCard()
+            DeleteAccountCard(onDelete = profileViewModel::deleteAccount)
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+@Composable
+private fun ErrorCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFEF2F2)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFFB91C1C),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun InfoCard(message: String, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFEFF6FF)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFF1D4ED8),
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }
 
@@ -92,7 +194,7 @@ private fun SidebarChip(icon: ImageVector, label: String, isSelected: Boolean, o
 }
 
 @Composable
-private fun ProfileHeaderCard(displayName: String) {
+private fun ProfileHeaderCard(displayName: String, major: String, bio: String) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -113,9 +215,9 @@ private fun ProfileHeaderCard(displayName: String) {
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
-                Text("Computer Science", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
+                Text(major, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Senior CS student. I love building web apps and studying algorithms.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B), lineHeight = 18.sp)
+                Text(bio, style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B), lineHeight = 18.sp)
             }
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = {}, shape = RoundedCornerShape(10.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)) {
@@ -126,7 +228,17 @@ private fun ProfileHeaderCard(displayName: String) {
 }
 
 @Composable
-private fun PersonalDetailsCard(displayName: String, email: String) {
+private fun PersonalDetailsCard(
+    name: String,
+    email: String,
+    major: String,
+    bio: String,
+    saving: Boolean,
+    onNameChange: (String) -> Unit,
+    onMajorChange: (String) -> Unit,
+    onBioChange: (String) -> Unit,
+    onSave: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -138,12 +250,12 @@ private fun PersonalDetailsCard(displayName: String, email: String) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Personal Details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             }
-            ProfileFormField("Full Name", displayName)
-            ProfileFormField("Email Address", email)
-            ProfileFormField("Major / Program", "Computer Science")
-            ProfileFormField("Bio", "Senior CS student. I love building web apps and studying algorithms. Always up for a late-night study session before finals!", singleLine = false, minLines = 3)
-            Button(onClick = {}, modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))) {
-                Text("Save Changes", fontWeight = FontWeight.Bold)
+            ProfileFormField("Full Name", name, onValueChange = onNameChange)
+            ProfileFormField("Email Address", email, readOnly = true)
+            ProfileFormField("Major / Program", major, onValueChange = onMajorChange)
+            ProfileFormField("Bio", bio, onValueChange = onBioChange, singleLine = false, minLines = 3)
+            Button(onClick = onSave, enabled = !saving, modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))) {
+                Text(if (saving) "Saving..." else "Save Changes", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -151,7 +263,13 @@ private fun PersonalDetailsCard(displayName: String, email: String) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MyCoursesCard() {
+private fun MyCoursesCard(
+    myCourses: List<CourseDto>,
+    availableCourses: List<CourseDto>,
+    courseError: String?,
+    onAddCourse: (Int) -> Unit,
+    onRemoveCourse: (Int) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -163,18 +281,26 @@ private fun MyCoursesCard() {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("My Courses", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("CS301", "MATH220", "PHYS101", "ENG101").forEach { CourseChip(it) }
+            courseError?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = Color(0xFFB91C1C))
             }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = "", onValueChange = {},
-                    placeholder = { Text("Add a course (e.g. HIST 201)", style = MaterialTheme.typography.bodySmall) },
-                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFF8FAFC), unfocusedContainerColor = Color(0xFFF8FAFC), unfocusedBorderColor = Color(0xFFE2E8F0))
-                )
-                Button(onClick = {}, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9))) {
-                    Text("Add", color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (myCourses.isEmpty()) {
+                    Text("No courses added yet.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
+                } else {
+                    myCourses.forEach { course ->
+                        CourseChip(name = course.code, onRemove = { onRemoveCourse(course.id) })
+                    }
+                }
+            }
+            if (availableCourses.isNotEmpty()) {
+                Text("Available Courses", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    availableCourses.take(8).forEach { course ->
+                        OutlinedButton(onClick = { onAddCourse(course.id) }, shape = RoundedCornerShape(10.dp)) {
+                            Text("Add ${course.code}", color = Color(0xFF0F172A), fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
@@ -182,26 +308,26 @@ private fun MyCoursesCard() {
 }
 
 @Composable
-private fun CourseChip(name: String) {
+private fun CourseChip(name: String, onRemove: () -> Unit) {
     Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFEFF6FF), border = BorderStroke(1.dp, Color(0xFFDBEAFE))) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-            Text("×", style = MaterialTheme.typography.bodySmall, color = Color(0xFF2563EB), modifier = Modifier.clickable { })
+            Text("x", style = MaterialTheme.typography.bodySmall, color = Color(0xFF2563EB), modifier = Modifier.clickable { onRemove() })
         }
     }
 }
 
 @Composable
-private fun DeleteAccountCard() {
+private fun DeleteAccountCard(onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
         elevation = CardDefaults.cardElevation(0.dp), border = BorderStroke(1.dp, Color(0xFFFEE2E2))
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("🗑️  Delete Account", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
+            Text("Delete Account", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF991B1B))
             Text("Once you delete your account, there is no going back. Please be certain.", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFB91C1C))
-            OutlinedButton(onClick = {}, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFFEE2E2))) {
+            OutlinedButton(onClick = onDelete, shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFFEE2E2))) {
                 Text("Delete Account", color = Color(0xFFB91C1C), fontWeight = FontWeight.Bold)
             }
         }
@@ -209,12 +335,19 @@ private fun DeleteAccountCard() {
 }
 
 @Composable
-private fun ProfileFormField(label: String, value: String, singleLine: Boolean = true, minLines: Int = 1) {
+private fun ProfileFormField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit = {},
+    readOnly: Boolean = false,
+    singleLine: Boolean = true,
+    minLines: Int = 1
+) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
         OutlinedTextField(
-            value = value, onValueChange = {}, modifier = Modifier.fillMaxWidth(),
-            readOnly = true, singleLine = singleLine, minLines = minLines, shape = RoundedCornerShape(12.dp),
+            value = value, onValueChange = onValueChange, modifier = Modifier.fillMaxWidth(),
+            readOnly = readOnly, singleLine = singleLine, minLines = minLines, shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color(0xFFF8FAFC), unfocusedContainerColor = Color(0xFFF8FAFC), focusedBorderColor = Color(0xFFE2E8F0), unfocusedBorderColor = Color(0xFFE2E8F0))
         )
     }

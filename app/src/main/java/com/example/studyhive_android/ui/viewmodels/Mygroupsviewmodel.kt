@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel for [MyGroupsScreen].
- * Mirrors MyGroupsPage.tsx — shows groups the user *owns*, each with its next session.
+ * Mirrors MyGroupsPage.tsx — shows groups the user owns or has joined, each with its next session.
  */
 class MyGroupsViewModel(
     private val groupRepo:   GroupRepository   = GroupRepository(),
@@ -39,13 +39,16 @@ class MyGroupsViewModel(
             _uiState.value = MyGroupsUiState(loading = true)
             try {
                 val groupsDeferred  = async { groupRepo.getGroups() }
+                val joinedDeferred  = async { groupRepo.getMyJoinedGroups() }
                 val coursesDeferred = async { courseRepo.getCourses() }
 
                 val allGroups = groupsDeferred.await()
+                val joinedGroups = joinedDeferred.await()
                 val courses   = coursesDeferred.await()
                 val owned     = allGroups.filter { it.creatorId == currentUserId }
+                val myGroups  = (owned + joinedGroups).distinctBy { it.id }
 
-                val nextMap = owned.associate { group ->
+                val nextMap = myGroups.associate { group ->
                     val next = try {
                         sessionRepo.getSessionsByGroup(group.id)
                             .sortedBy { it.scheduledAt }
@@ -56,7 +59,7 @@ class MyGroupsViewModel(
 
                 _uiState.value = MyGroupsUiState(
                     loading       = false,
-                    groups        = owned,
+                    groups        = myGroups,
                     courseMap     = courses.associate { it.id to it.code },
                     nextSessionMap = nextMap
                 )

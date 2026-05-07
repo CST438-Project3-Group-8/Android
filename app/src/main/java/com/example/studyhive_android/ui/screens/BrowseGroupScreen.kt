@@ -22,16 +22,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.model.StudyGroupDto
+import com.example.studyhive_android.ui.viewmodels.BrowseGroupsViewModel
 
 @Composable
 fun BrowseGroupScreen(
     onBackClick: () -> Unit,
     onCreateGroup: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    browseGroupsViewModel: BrowseGroupsViewModel = viewModel()
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val filters = listOf("All", "CS 301", "MATH 220", "PHYS 101", "ENG 101", "Online", "In-Person")
-    var selectedFilter by remember { mutableStateOf("All") }
+    val uiState = browseGroupsViewModel.uiState.collectAsStateWithLifecycle().value
+    val filters = remember(uiState.allGroups, uiState.courseMap) {
+        val modes = uiState.allGroups.mapNotNull { it.meetingMode?.takeIf(String::isNotBlank) }.distinct().sorted()
+        val courses = uiState.courseMap.values.distinct().sorted()
+        listOf("All") + courses + modes
+    }
+
+    LaunchedEffect(Unit) {
+        browseGroupsViewModel.load()
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -60,8 +72,8 @@ fun BrowseGroupScreen(
                 }
 
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                    value = uiState.searchQuery,
+                    onValueChange = browseGroupsViewModel::setSearch,
                     placeholder = { Text("Search groups...", fontSize = 14.sp) },
                     leadingIcon = { 
                         Icon(
@@ -167,16 +179,58 @@ fun BrowseGroupScreen(
                         items(filters) { filter ->
                             FilterChip(
                                 text = filter,
-                                isSelected = selectedFilter == filter,
-                                onClick = { selectedFilter = filter }
+                                isSelected = uiState.modeFilter == filter,
+                                onClick = { browseGroupsViewModel.setModeFilter(filter) }
                             )
                         }
                     }
                 }
 
-                items(sampleBrowseGroups) { group ->
+                if (uiState.loading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
+
+                uiState.error?.let { error ->
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                            ErrorCard(message = error)
+                        }
+                    }
+                }
+
+                uiState.actionMessage?.let { message ->
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                            InfoMessageCard(message = message, onDismiss = browseGroupsViewModel::clearMessage)
+                        }
+                    }
+                }
+
+                if (!uiState.loading && uiState.filtered.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                            EmptyBrowseCard("No groups match your search.")
+                        }
+                    }
+                }
+
+                items(uiState.filtered, key = { it.id }) { group ->
                     Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                        BrowseGroupCard(group)
+                        BrowseGroupCard(
+                            group = group,
+                            course = uiState.courseMap[group.courseId].orEmpty().ifBlank { "No Course" },
+                            isJoined = group.id in uiState.joinedGroupIds,
+                            isBusy = uiState.joiningGroupId == group.id,
+                            onJoin = { browseGroupsViewModel.joinGroup(group.id) },
+                            onLeave = { browseGroupsViewModel.leaveGroup(group.id) }
+                        )
                     }
                 }
             }
@@ -203,7 +257,15 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun BrowseGroupCard(group: BrowseGroupData) {
+private fun BrowseGroupCard(
+    group: StudyGroupDto,
+    course: String,
+    isJoined: Boolean,
+    isBusy: Boolean,
+    onJoin: () -> Unit,
+    onLeave: () -> Unit
+) {
+    val mode = group.meetingMode.orEmpty().ifBlank { "Mode TBD" }
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -217,15 +279,15 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Tag(text = group.course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
+                Tag(text = course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
                 Tag(
-                    text = group.mode,
-                    backgroundColor = when(group.mode) {
+                    text = mode,
+                    backgroundColor = when(mode) {
                         "Online" -> Color(0xFFEFF6FF)
                         "In-Person" -> Color(0xFFF0FDF4)
                         else -> Color(0xFFFAF5FF)
                     },
-                    textColor = when(group.mode) {
+                    textColor = when(mode) {
                         "Online" -> Color(0xFF2563EB)
                         "In-Person" -> Color(0xFF16A34A)
                         else -> Color(0xFF9333EA)
@@ -236,7 +298,7 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = group.name,
+                text = group.title.orEmpty().ifBlank { "Untitled Group" },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A)
@@ -245,7 +307,7 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = group.description,
+                text = group.description.orEmpty().ifBlank { "No description provided." },
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF64748B),
                 maxLines = 2
@@ -254,9 +316,9 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoRow(icon = Icons.Default.DateRange, text = group.schedule)
-                InfoRow(icon = Icons.Default.LocationOn, text = group.location)
-                InfoRow(icon = Icons.Default.Groups, text = "${group.memberCount} / ${group.maxMembers} members")
+                InfoRow(icon = Icons.Default.DateRange, text = "Schedule TBD")
+                InfoRow(icon = Icons.Default.LocationOn, text = group.location.orEmpty().ifBlank { "Location TBD" })
+                InfoRow(icon = Icons.Default.Groups, text = "Max ${group.maxMembers ?: "unlimited"} members")
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -266,10 +328,11 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MemberAvatars(count = group.memberCount)
+                MemberAvatars(count = 0)
                 
-                if (group.isJoined) {
+                if (isJoined) {
                     Surface(
+                        modifier = Modifier.clickable(enabled = !isBusy) { onLeave() },
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFF0FDF4),
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDCFCE7))
@@ -280,21 +343,71 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
                         ) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Joined", color = Color(0xFF16A34A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(if (isBusy) "Leaving..." else "Joined", color = Color(0xFF16A34A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 } else {
                     Button(
-                        onClick = { },
+                        onClick = onJoin,
+                        enabled = !isBusy,
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        Text("View Details", color = Color(0xFF0F172A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Text(if (isBusy) "Joining..." else "Join", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ErrorCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFFEF2F2)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFFB91C1C),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun InfoMessageCard(message: String, onDismiss: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onDismiss() },
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFEFF6FF)
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(12.dp),
+            color = Color(0xFF1D4ED8),
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+private fun EmptyBrowseCard(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Text(
+            text = message,
+            modifier = Modifier.padding(16.dp),
+            color = Color(0xFF64748B),
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 
@@ -365,50 +478,3 @@ private fun MemberAvatars(count: Int) {
     }
 }
 
-private data class BrowseGroupData(
-    val course: String,
-    val mode: String,
-    val name: String,
-    val description: String,
-    val schedule: String,
-    val location: String,
-    val memberCount: Int,
-    val maxMembers: Int,
-    val isJoined: Boolean
-)
-
-private val sampleBrowseGroups = listOf(
-    BrowseGroupData(
-        course = "CS 301",
-        mode = "In-Person",
-        name = "Algorithm Enthusiasts",
-        description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy algorithms.",
-        schedule = "Thursdays 4:00 PM - 6:00 PM",
-        location = "Main Library, Room 402",
-        memberCount = 5,
-        maxMembers = 8,
-        isJoined = true
-    ),
-    BrowseGroupData(
-        course = "MATH 220",
-        mode = "Online",
-        name = "Calculus III Prep",
-        description = "Preparing for the upcoming midterms. Bring your problem sets, and we'll work through the toughest derivatives.",
-        schedule = "Tuesdays 7:00 PM - 8:30 PM",
-        location = "Zoom",
-        memberCount = 12,
-        maxMembers = 15,
-        isJoined = true
-    ),
-    BrowseGroupData(
-        course = "PHYS 101",
-        mode = "Hybrid",
-        name = "Physics 101 Study Group",
-        description = "Reviewing classical mechanics and completing weekly assignments before they are due on Fridays.",
-        schedule = "Mondays 3:00 PM - 5:00 PM",
-        location = "Science Building, Rm 112 & Discord",
-        memberCount = 4,
-        maxMembers = 10,
-        isJoined = false
-    )
-)

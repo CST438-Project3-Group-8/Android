@@ -41,7 +41,10 @@ class CreateGroupViewModel(
                 val courses = courseRepo.getCourses()
                 _uiState.value = _uiState.value.copy(courses = courses, loadingCourses = false)
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(loadingCourses = false)
+                _uiState.value = _uiState.value.copy(
+                    loadingCourses = false,
+                    error = e.message ?: "Unable to load courses."
+                )
             }
         }
     }

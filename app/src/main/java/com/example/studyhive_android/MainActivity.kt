@@ -91,6 +91,7 @@ fun StudyHiveApp(authViewModel: AuthViewModel = viewModel()) {
 
         Routes.DASHBOARD -> DashboardScreen(
             userName = authenticatedUser?.displayName ?: "User",
+            currentUserId = authViewModel.currentUserId,
             onLogout = {
                 authViewModel.signOut()
                 backStack.clear()
@@ -127,6 +128,7 @@ fun StudyHiveApp(authViewModel: AuthViewModel = viewModel()) {
         )
 
         Routes.MY_GROUPS -> MyGroupsScreen(
+            currentUserId = authViewModel.currentUserId,
             onBackToDashboard = { navigateBack() },
             onFindMoreGroups = { navigate(Routes.BROWSE_GROUPS) },
             onProfileClick = { navigate(Routes.PROFILE) }
