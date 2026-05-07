@@ -1,9 +1,24 @@
 package com.example.studyhive_android.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -11,27 +26,70 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.model.StudyGroupDto
+import com.example.studyhive_android.ui.viewmodels.BrowseGroupsViewModel
 
 @Composable
 fun BrowseGroupScreen(
     onBackClick: () -> Unit,
     onCreateGroup: () -> Unit,
-    onProfileClick: () -> Unit
+    onProfileClick: () -> Unit,
+    viewModel: BrowseGroupsViewModel = viewModel()
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    val filters = listOf("All", "CS 301", "MATH 220", "PHYS 101", "ENG 101", "Online", "In-Person")
-    var selectedFilter by remember { mutableStateOf("All") }
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
+
+    val filters = remember(uiState.courseMap, uiState.allGroups) {
+        val courseFilters = uiState.courseMap.values
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        val modeFilters = uiState.allGroups
+            .mapNotNull { it.meetingMode }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+
+        listOf("All") + courseFilters + modeFilters
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -43,7 +101,6 @@ fun BrowseGroupScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            // Top Bar with Back, Search and Profile
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -60,15 +117,15 @@ fun BrowseGroupScreen(
                 }
 
                 OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                    value = uiState.searchQuery,
+                    onValueChange = viewModel::setSearch,
                     placeholder = { Text("Search groups...", fontSize = 14.sp) },
-                    leadingIcon = { 
+                    leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Search, 
-                            contentDescription = null, 
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
                             modifier = Modifier.size(20.dp)
-                        ) 
+                        )
                     },
                     modifier = Modifier
                         .weight(1f)
@@ -115,7 +172,7 @@ fun BrowseGroupScreen(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF0F172A)
                             )
-                            
+
                             Button(
                                 onClick = onCreateGroup,
                                 shape = RoundedCornerShape(12.dp),
@@ -123,8 +180,8 @@ fun BrowseGroupScreen(
                                 contentPadding = PaddingValues(horizontal = 12.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Add, 
-                                    contentDescription = null, 
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -157,9 +214,9 @@ fun BrowseGroupScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.FilterList, 
-                                    contentDescription = null, 
-                                    tint = Color(0xFF64748B), 
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = null,
+                                    tint = Color(0xFF64748B),
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -167,16 +224,71 @@ fun BrowseGroupScreen(
                         items(filters) { filter ->
                             FilterChip(
                                 text = filter,
-                                isSelected = selectedFilter == filter,
-                                onClick = { selectedFilter = filter }
+                                isSelected = uiState.selectedFilter == filter,
+                                onClick = { viewModel.setFilter(filter) }
                             )
                         }
                     }
                 }
 
-                items(sampleBrowseGroups) { group ->
-                    Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                        BrowseGroupCard(group)
+                if (uiState.actionMessage != null) {
+                    item {
+                        Text(
+                            text = uiState.actionMessage.orEmpty(),
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            color = Color(0xFF2563EB),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                when {
+                    uiState.loading -> {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        }
+                    }
+
+                    uiState.error != null -> {
+                        item {
+                            Text(
+                                text = uiState.error ?: "Unable to load groups.",
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                color = Color(0xFFB91C1C),
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    uiState.filtered.isEmpty() -> {
+                        item {
+                            Text(
+                                text = "No groups found.",
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                color = Color(0xFF64748B)
+                            )
+                        }
+                    }
+
+                    else -> {
+                        items(uiState.filtered) { group ->
+                            Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                                BrowseGroupCard(
+                                    group = group,
+                                    courseName = uiState.courseMap[group.courseId].orEmpty(),
+                                    isBusy = uiState.joiningGroupId == group.id,
+                                    onJoin = { viewModel.joinGroup(group.id) },
+                                    onLeave = { viewModel.leaveGroup(group.id) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -190,7 +302,7 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
         modifier = Modifier.clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
         color = if (isSelected) Color(0xFF2563EB) else Color.White,
-        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+        border = if (isSelected) null else BorderStroke(1.dp, Color(0xFFE2E8F0))
     ) {
         Text(
             text = text,
@@ -203,13 +315,19 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-private fun BrowseGroupCard(group: BrowseGroupData) {
+private fun BrowseGroupCard(
+    group: StudyGroupDto,
+    courseName: String,
+    isBusy: Boolean,
+    onJoin: () -> Unit,
+    onLeave: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF1F5F9))
+        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
@@ -217,15 +335,19 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Tag(text = group.course, backgroundColor = Color(0xFFF1F5F9), textColor = Color(0xFF475569))
                 Tag(
-                    text = group.mode,
-                    backgroundColor = when(group.mode) {
+                    text = courseName.ifBlank { "Course" },
+                    backgroundColor = Color(0xFFF1F5F9),
+                    textColor = Color(0xFF475569)
+                )
+                Tag(
+                    text = group.meetingMode ?: "Unknown",
+                    backgroundColor = when (group.meetingMode) {
                         "Online" -> Color(0xFFEFF6FF)
                         "In-Person" -> Color(0xFFF0FDF4)
                         else -> Color(0xFFFAF5FF)
                     },
-                    textColor = when(group.mode) {
+                    textColor = when (group.meetingMode) {
                         "Online" -> Color(0xFF2563EB)
                         "In-Person" -> Color(0xFF16A34A)
                         else -> Color(0xFF9333EA)
@@ -236,7 +358,7 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = group.name,
+                text = group.title ?: "Untitled group",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A)
@@ -245,7 +367,7 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = group.description,
+                text = group.description ?: "",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF64748B),
                 maxLines = 2
@@ -254,9 +376,9 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                InfoRow(icon = Icons.Default.DateRange, text = group.schedule)
-                InfoRow(icon = Icons.Default.LocationOn, text = group.location)
-                InfoRow(icon = Icons.Default.Groups, text = "${group.memberCount} / ${group.maxMembers} members")
+                InfoRow(icon = Icons.Default.DateRange, text = "Schedule TBD")
+                InfoRow(icon = Icons.Default.LocationOn, text = group.location ?: "Location TBD")
+                InfoRow(icon = Icons.Default.Groups, text = "Up to ${group.maxMembers} members")
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -266,31 +388,19 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MemberAvatars(count = group.memberCount)
-                
-                if (group.isJoined) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFF0FDF4),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDCFCE7))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Joined", color = Color(0xFF16A34A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                    }
-                } else {
-                    Button(
-                        onClick = { },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF1F5F9)),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text("View Details", color = Color(0xFF0F172A), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                MemberAvatars(count = minOf(3, group.maxMembers ?: 3))
+
+                Button(
+                    onClick = onJoin,
+                    enabled = !isBusy,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    if (isBusy) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Join Group", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
@@ -299,7 +409,7 @@ private fun BrowseGroupCard(group: BrowseGroupData) {
 }
 
 @Composable
-private fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+private fun InfoRow(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(8.dp))
@@ -364,51 +474,3 @@ private fun MemberAvatars(count: Int) {
         }
     }
 }
-
-private data class BrowseGroupData(
-    val course: String,
-    val mode: String,
-    val name: String,
-    val description: String,
-    val schedule: String,
-    val location: String,
-    val memberCount: Int,
-    val maxMembers: Int,
-    val isJoined: Boolean
-)
-
-private val sampleBrowseGroups = listOf(
-    BrowseGroupData(
-        course = "CS 301",
-        mode = "In-Person",
-        name = "Algorithm Enthusiasts",
-        description = "Weekly review of algorithms, focusing on dynamic programming, graphs, and greedy algorithms.",
-        schedule = "Thursdays 4:00 PM - 6:00 PM",
-        location = "Main Library, Room 402",
-        memberCount = 5,
-        maxMembers = 8,
-        isJoined = true
-    ),
-    BrowseGroupData(
-        course = "MATH 220",
-        mode = "Online",
-        name = "Calculus III Prep",
-        description = "Preparing for the upcoming midterms. Bring your problem sets, and we'll work through the toughest derivatives.",
-        schedule = "Tuesdays 7:00 PM - 8:30 PM",
-        location = "Zoom",
-        memberCount = 12,
-        maxMembers = 15,
-        isJoined = true
-    ),
-    BrowseGroupData(
-        course = "PHYS 101",
-        mode = "Hybrid",
-        name = "Physics 101 Study Group",
-        description = "Reviewing classical mechanics and completing weekly assignments before they are due on Fridays.",
-        schedule = "Mondays 3:00 PM - 5:00 PM",
-        location = "Science Building, Rm 112 & Discord",
-        memberCount = 4,
-        maxMembers = 10,
-        isJoined = false
-    )
-)

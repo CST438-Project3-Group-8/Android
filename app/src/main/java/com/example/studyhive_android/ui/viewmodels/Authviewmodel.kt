@@ -5,32 +5,19 @@ import androidx.lifecycle.viewModelScope
 import com.example.studyhive_android.data.repository.AuthRepository
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.net.UnknownHostException
 
-/**
- * Auth ViewModel — Android equivalent of [AuthContext.tsx].
- *
- * Holds:
- *  - [authState]  : current auth + bootstrap state
- *  - sign-in / sign-up / sign-out actions
- *
- * After every successful Supabase sign-in, this ViewModel calls
- * [AuthRepository.bootstrapBackendProfile] to upsert the user record on the
- * Spring Boot backend — exactly what [AuthContext.tsx] does with createProfile().
- */
 class AuthViewModel(
     private val repo: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
-    // ── State ────────────────────────────────────────────────────────────
-
     sealed class AuthState {
         object Loading : AuthState()
         object Unauthenticated : AuthState()
+        data class AwaitingEmailConfirmation(val email: String) : AuthState()
         data class Bootstrapping(val session: UserSession) : AuthState()
         data class Authenticated(val session: UserSession, val displayName: String) : AuthState()
         data class BootstrapError(val session: UserSession, val message: String) : AuthState()
@@ -46,14 +33,15 @@ class AuthViewModel(
         observeSession()
     }
 
-    // ── Session observer ─────────────────────────────────────────────────
-
     private fun observeSession() {
         viewModelScope.launch {
             repo.sessionFlow.collect { session ->
-                when {
-                    session == null -> _authState.value = AuthState.Unauthenticated
-                    else            -> bootstrapWithSession(session)
+                if (session == null) {
+                    if (_authState.value !is AuthState.AwaitingEmailConfirmation) {
+                        _authState.value = AuthState.Unauthenticated
+                    }
+                } else {
+                    bootstrapWithSession(session)
                 }
             }
         }
@@ -67,6 +55,14 @@ class AuthViewModel(
                 session = session,
                 displayName = repo.displayName()
             )
+        } catch (e: UnknownHostException) {
+            // Backend isn't deployed yet — treat as authenticated anyway so
+            // the app is usable during development. Remove this branch once
+            // the Spring Boot API is live.
+            _authState.value = AuthState.Authenticated(
+                session = session,
+                displayName = repo.displayName()
+            )
         } catch (e: Exception) {
             _authState.value = AuthState.BootstrapError(
                 session = session,
@@ -74,8 +70,6 @@ class AuthViewModel(
             )
         }
     }
-
-    // ── Sign-in actions ─────────────────────────────────────────────────
 
     fun signInWithGoogle() {
         viewModelScope.launch {
@@ -105,6 +99,14 @@ class AuthViewModel(
         viewModelScope.launch {
             _actionError.value = null
             runCatching { repo.signUpWithEmail(email, password, fullName) }
+                .onSuccess {
+                    // Supabase requires email confirmation by default.
+                    // If confirmation is disabled in the dashboard, sessionFlow
+                    // will fire and take over automatically.
+                    if (_authState.value !is AuthState.Authenticated) {
+                        _authState.value = AuthState.AwaitingEmailConfirmation(email)
+                    }
+                }
                 .onFailure { _actionError.value = it.message }
         }
     }
@@ -112,26 +114,20 @@ class AuthViewModel(
     fun signOut() {
         viewModelScope.launch {
             runCatching { repo.signOut() }
+            _authState.value = AuthState.Unauthenticated
         }
     }
 
     fun retryBootstrap() {
         val current = _authState.value
         if (current is AuthState.BootstrapError) {
-            viewModelScope.launch {
-                bootstrapWithSession(current.session)
-            }
+            viewModelScope.launch { bootstrapWithSession(current.session) }
         }
     }
 
-    fun clearActionError() {
-        _actionError.value = null
-    }
-
-    // ── Convenience getters ─────────────────────────────────────────────
+    fun clearActionError() { _actionError.value = null }
 
     val currentUserId: String? get() = repo.currentUserId()
     val displayName:   String  get() = repo.displayName()
-    val isAuthenticated: Boolean
-        get() = _authState.value is AuthState.Authenticated
+    val isAuthenticated: Boolean get() = _authState.value is AuthState.Authenticated
 }

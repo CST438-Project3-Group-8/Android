@@ -29,18 +29,18 @@ import java.util.concurrent.TimeUnit
  * request to the Spring Boot API.
  */
 object RetrofitClient {
+    private const val BASE_URL = "http://10.0.2.2:8080/"
 
     // Resolved in init() from BuildConfig.API_BASE_URL
-    private var baseUrl: String = "https://api.studyhive.app/"
 
     /**
      * Call once from [StudyHiveApp.onCreate] with the application context.
      * The context is only needed if you want to persist tokens via DataStore
      * (currently the Supabase SDK manages its own session storage).
      */
+
     fun init(context: Context) {
         // No-op for now; hook is here so we can add DataStore later if needed.
-        baseUrl = BuildConfig.API_BASE_URL.ifBlank { "https://api.studyhive.app/" }
     }
 
     // ── Auth interceptor ─────────────────────────────────────────────────
@@ -83,7 +83,7 @@ object RetrofitClient {
 
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
-            .baseUrl(baseUrl)
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()

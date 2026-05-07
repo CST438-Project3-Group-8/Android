@@ -10,11 +10,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * ViewModel for [BrowseGroupScreen].
- * Mirrors FindGroupsPage.tsx — loads all groups, supports search + mode filter,
- * and exposes join/leave actions.
- */
 class BrowseGroupsViewModel(
     private val groupRepo: GroupRepository = GroupRepository(),
     private val courseRepo: CourseRepository = CourseRepository()
@@ -26,19 +21,24 @@ class BrowseGroupsViewModel(
         val allGroups: List<StudyGroupDto> = emptyList(),
         val courseMap: Map<Int, String> = emptyMap(),
         val searchQuery: String = "",
-        val modeFilter: String = "All",
+        val selectedFilter: String = "All",
         val joiningGroupId: Int? = null,
         val actionMessage: String? = null
     ) {
         val filtered: List<StudyGroupDto>
-            get() {
-                return allGroups.filter { group ->
-                    val matchSearch = searchQuery.isBlank() ||
-                            group.title.orEmpty().contains(searchQuery, ignoreCase = true) ||
-                            group.description.orEmpty().contains(searchQuery, ignoreCase = true)
-                    val matchMode = modeFilter == "All" || group.meetingMode == modeFilter
-                    matchSearch && matchMode
-                }
+            get() = allGroups.filter { group ->
+                val courseCode = courseMap[group.courseId].orEmpty()
+
+                val matchesSearch = searchQuery.isBlank() ||
+                    group.title.orEmpty().contains(searchQuery, ignoreCase = true) ||
+                    group.description.orEmpty().contains(searchQuery, ignoreCase = true) ||
+                    courseCode.contains(searchQuery, ignoreCase = true)
+
+                val matchesFilter = selectedFilter == "All" ||
+                    group.meetingMode.orEmpty().equals(selectedFilter, ignoreCase = true) ||
+                    courseCode.equals(selectedFilter, ignoreCase = true)
+
+                matchesSearch && matchesFilter
             }
     }
 
@@ -49,17 +49,18 @@ class BrowseGroupsViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true, error = null)
             try {
-                val groups  = groupRepo.getGroups()
+                val groups = groupRepo.getGroups()
                 val courses = courseRepo.getCourses()
+
                 _uiState.value = _uiState.value.copy(
-                    loading   = false,
+                    loading = false,
                     allGroups = groups,
                     courseMap = courses.associate { it.id to it.code }
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     loading = false,
-                    error   = e.message ?: "Unable to load groups."
+                    error = e.message ?: "Unable to load groups. Is the backend running?"
                 )
             }
         }
@@ -69,8 +70,8 @@ class BrowseGroupsViewModel(
         _uiState.value = _uiState.value.copy(searchQuery = query)
     }
 
-    fun setModeFilter(filter: String) {
-        _uiState.value = _uiState.value.copy(modeFilter = filter)
+    fun setFilter(filter: String) {
+        _uiState.value = _uiState.value.copy(selectedFilter = filter)
     }
 
     fun joinGroup(groupId: Int) {
@@ -78,15 +79,16 @@ class BrowseGroupsViewModel(
             _uiState.value = _uiState.value.copy(joiningGroupId = groupId, actionMessage = null)
             groupRepo.joinGroup(groupId)
                 .onSuccess {
+                    load()
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
-                        actionMessage  = "Joined group!"
+                        actionMessage = "Joined group!"
                     )
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
-                        actionMessage  = e.message ?: "Could not join group."
+                        actionMessage = e.message ?: "Could not join group."
                     )
                 }
         }
@@ -97,15 +99,16 @@ class BrowseGroupsViewModel(
             _uiState.value = _uiState.value.copy(joiningGroupId = groupId, actionMessage = null)
             groupRepo.leaveGroup(groupId)
                 .onSuccess {
+                    load()
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
-                        actionMessage  = "Left group."
+                        actionMessage = "Left group."
                     )
                 }
                 .onFailure { e ->
                     _uiState.value = _uiState.value.copy(
                         joiningGroupId = null,
-                        actionMessage  = e.message ?: "Could not leave group."
+                        actionMessage = e.message ?: "Could not leave group."
                     )
                 }
         }

@@ -1,3 +1,13 @@
+import java.util.Properties
+
+// ── Load local.properties so secrets are available to BuildConfig ─────────────
+// project.findProperty() only reads gradle.properties, NOT local.properties.
+// We have to load the file ourselves.
+val localProps = Properties().also { props ->
+    val file = rootProject.file("local.properties")
+    if (file.exists()) props.load(file.inputStream())
+}
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -16,15 +26,17 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // ── Supabase / API config ──────────────────────────────────────────
-        // Put your actual values in local.properties and read them here, or
-        // hardcode for development. NEVER commit secrets to version control.
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
-        buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("API_BASE_URL") ?: "https://api.studyhive.app/"}\"")
+        // ── Supabase / API config ─────────────────────────────────────────
+        val supabaseUrl     = localProps["SUPABASE_URL"]     as? String ?: ""
+        val supabaseAnonKey = localProps["SUPABASE_ANON_KEY"] as? String ?: ""
+        val apiBaseUrl      = localProps["API_BASE_URL"]     as? String ?: "https://api.studyhive.app/"
 
-        manifestPlaceholders["supabaseUrl"] = project.findProperty("SUPABASE_URL") ?: ""
-        manifestPlaceholders["supabaseAnonKey"] = project.findProperty("SUPABASE_ANON_KEY") ?: ""
+        buildConfigField("String", "SUPABASE_URL",    "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "API_BASE_URL",    "\"$apiBaseUrl\"")
+
+        manifestPlaceholders["supabaseUrl"]     = supabaseUrl
+        manifestPlaceholders["supabaseAnonKey"] = supabaseAnonKey
     }
 
     buildTypes {
@@ -78,14 +90,13 @@ dependencies {
     // ── Coroutines ────────────────────────────────────────────────────────
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // ── Supabase (Auth + PostgREST client) ─────────────────────────────
+    // ── Supabase ─────────────────────────────────────────────────────────
     implementation(platform("io.github.jan-tennert.supabase:bom:3.0.3"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:postgrest-kt")
-    // Ktor engine used by Supabase SDK
     implementation("io.ktor:ktor-client-android:3.0.3")
 
-    // ── DataStore (token persistence) ─────────────────────────────────────
+    // ── DataStore ─────────────────────────────────────────────────────────
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     // ── Testing ───────────────────────────────────────────────────────────
