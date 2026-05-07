@@ -75,14 +75,17 @@ class MainActivity : ComponentActivity() {
 
                     "browseGroups" -> {
                         BrowseGroupScreen(
-                            onBackClick = { currentScreen = "dashboard" }
+                            onBackClick = { currentScreen = "dashboard" },
+                            onCreateGroup = { currentScreen = "createGroup" },
+                            onProfileClick = { currentScreen = "profile" }
                         )
                     }
 
                     "myGroups" -> {
                         MyGroupsScreen(
                             onBackToDashboard = { currentScreen = "dashboard" },
-                            onFindMoreGroups = { currentScreen = "browseGroups" }
+                            onFindMoreGroups = { currentScreen = "browseGroups" },
+                            onProfileClick = { currentScreen = "profile" }
                         )
                     }
 
