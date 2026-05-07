@@ -3,100 +3,114 @@ package com.example.studyhive_android
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import com.example.studyhive_android.ui.screens.BrowseGroupScreen
-import com.example.studyhive_android.ui.screens.CreateGroupScreen
-import com.example.studyhive_android.ui.screens.DashboardScreen
-import com.example.studyhive_android.ui.screens.LoginScreen
-import com.example.studyhive_android.ui.screens.MyGroupsScreen
-import com.example.studyhive_android.ui.screens.ProfileScreen
-import com.example.studyhive_android.ui.screens.ResetPasswordScreen
-import com.example.studyhive_android.ui.screens.SignupScreen
+import com.example.studyhive_android.ui.screens.*
 import com.example.studyhive_android.ui.theme.StudyHiveAndroidTheme
+
+// ── Screen route constants ─────────────────────────────────────────────────
+private object Routes {
+    const val LOGIN = "login"
+    const val SIGNUP = "signup"
+    const val DASHBOARD = "dashboard"
+    const val PROFILE = "profile"
+    const val RESET_PASSWORD = "resetPassword"
+    const val CREATE_GROUP = "createGroup"
+    const val BROWSE_GROUPS = "browseGroups"
+    const val MY_GROUPS = "myGroups"
+}
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         setContent {
             StudyHiveAndroidTheme {
-                var currentScreen by rememberSaveable { mutableStateOf("login") }
-
-                when (currentScreen) {
-                    "login" -> {
-                        LoginScreen(
-                            onShowSignup = { currentScreen = "signup" },
-                            onLoginSuccess = { currentScreen = "dashboard" }
-                        )
-                    }
-
-                    "signup" -> {
-                        SignupScreen(
-                            onShowLogin = { currentScreen = "login" },
-                            onSignupSuccess = { currentScreen = "dashboard" }
-                        )
-                    }
-
-                    "dashboard" -> {
-                        DashboardScreen(
-                            userName = "Alex",
-                            onLogout = { currentScreen = "login" },
-                            onCreateGroup = { currentScreen = "createGroup" },
-                            onBrowseGroups = { currentScreen = "browseGroups" },
-                            onMyGroups = { currentScreen = "myGroups" },
-                            onProfileClick = { currentScreen = "profile" }
-                        )
-                    }
-
-                    "profile" -> {
-                        ProfileScreen(
-                            onBack = { currentScreen = "dashboard" },
-                            onSecurityClick = { currentScreen = "resetPassword" }
-                        )
-                    }
-
-                    "resetPassword" -> {
-                        ResetPasswordScreen(
-                            onBack = { currentScreen = "profile" },
-                            onResetSuccess = { currentScreen = "profile" }
-                        )
-                    }
-
-                    "createGroup" -> {
-                        CreateGroupScreen(
-                            onBack = { currentScreen = "dashboard" },
-                            onCancel = { currentScreen = "dashboard" },
-                            onCreateGroup = { currentScreen = "dashboard" }
-                        )
-                    }
-
-                    "browseGroups" -> {
-                        BrowseGroupScreen(
-                            onBackClick = { currentScreen = "dashboard" },
-                            onCreateGroup = { currentScreen = "createGroup" },
-                            onProfileClick = { currentScreen = "profile" }
-                        )
-                    }
-
-                    "myGroups" -> {
-                        MyGroupsScreen(
-                            onBackToDashboard = { currentScreen = "dashboard" },
-                            onFindMoreGroups = { currentScreen = "browseGroups" },
-                            onProfileClick = { currentScreen = "profile" }
-                        )
-                    }
-
-                    else -> {
-                        LoginScreen(
-                            onShowSignup = { currentScreen = "signup" },
-                            onLoginSuccess = { currentScreen = "dashboard" }
-                        )
-                    }
-                }
+                StudyHiveApp()
             }
         }
+    }
+}
+
+@Composable
+fun StudyHiveApp() {
+    var currentScreen by rememberSaveable { mutableStateOf(Routes.LOGIN) }
+    // A minimal back stack for back navigation
+    val backStack = remember { mutableStateListOf<String>() }
+
+    fun navigate(route: String) {
+        backStack.add(currentScreen)
+        currentScreen = route
+    }
+
+    fun navigateBack() {
+        if (backStack.isNotEmpty()) {
+            currentScreen = backStack.removeLast()
+        }
+    }
+
+    when (currentScreen) {
+        Routes.LOGIN -> LoginScreen(
+            onShowSignup = { navigate(Routes.SIGNUP) },
+            onLoginSuccess = {
+                backStack.clear()
+                currentScreen = Routes.DASHBOARD
+            }
+        )
+
+        Routes.SIGNUP -> SignupScreen(
+            onShowLogin = { navigateBack() },
+            onSignupSuccess = {
+                backStack.clear()
+                currentScreen = Routes.DASHBOARD
+            }
+        )
+
+        Routes.DASHBOARD -> DashboardScreen(
+            userName = "Alex",
+            onLogout = {
+                backStack.clear()
+                currentScreen = Routes.LOGIN
+            },
+            onCreateGroup = { navigate(Routes.CREATE_GROUP) },
+            onBrowseGroups = { navigate(Routes.BROWSE_GROUPS) },
+            onMyGroups = { navigate(Routes.MY_GROUPS) },
+            onProfileClick = { navigate(Routes.PROFILE) }
+        )
+
+        Routes.PROFILE -> ProfileScreen(
+            onBack = { navigateBack() },
+            onSecurityClick = { navigate(Routes.RESET_PASSWORD) }
+        )
+
+        Routes.RESET_PASSWORD -> ResetPasswordScreen(
+            onBack = { navigateBack() },
+            onResetSuccess = { navigateBack() }
+        )
+
+        Routes.CREATE_GROUP -> CreateGroupScreen(
+            onBack = { navigateBack() },
+            onCancel = { navigateBack() },
+            onCreateGroup = { navigateBack() }
+        )
+
+        Routes.BROWSE_GROUPS -> BrowseGroupScreen(
+            onBackClick = { navigateBack() },
+            onCreateGroup = { navigate(Routes.CREATE_GROUP) },
+            onProfileClick = { navigate(Routes.PROFILE) }
+        )
+
+        Routes.MY_GROUPS -> MyGroupsScreen(
+            onBackToDashboard = { navigateBack() },
+            onFindMoreGroups = { navigate(Routes.BROWSE_GROUPS) },
+            onProfileClick = { navigate(Routes.PROFILE) }
+        )
+
+        else -> LoginScreen(
+            onShowSignup = { navigate(Routes.SIGNUP) },
+            onLoginSuccess = { currentScreen = Routes.DASHBOARD }
+        )
     }
 }
