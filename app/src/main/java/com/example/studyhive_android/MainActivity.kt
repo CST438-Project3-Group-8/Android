@@ -1,13 +1,19 @@
 package com.example.studyhive_android
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.studyhive_android.data.network.SupabaseClient
 import com.example.studyhive_android.ui.screens.*
 import com.example.studyhive_android.ui.theme.StudyHiveAndroidTheme
+import com.example.studyhive_android.ui.viewmodels.AuthViewModel
+import io.github.jan.supabase.auth.handleDeeplinks
 
 // ── Screen route constants ─────────────────────────────────────────────────
 private object Routes {
@@ -25,6 +31,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleAuthDeepLink(intent)
 
         setContent {
             StudyHiveAndroidTheme {
@@ -32,13 +39,25 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthDeepLink(intent)
+    }
+
+    private fun handleAuthDeepLink(intent: Intent) {
+        SupabaseClient.client.handleDeeplinks(intent)
+    }
 }
 
 @Composable
-fun StudyHiveApp() {
+fun StudyHiveApp(authViewModel: AuthViewModel = viewModel()) {
     var currentScreen by rememberSaveable { mutableStateOf(Routes.LOGIN) }
     // A minimal back stack for back navigation
     val backStack = remember { mutableStateListOf<String>() }
+    val authState by authViewModel.authState.collectAsStateWithLifecycle()
+    val authenticatedUser = authState as? AuthViewModel.AuthState.Authenticated
 
     fun navigate(route: String) {
         backStack.add(currentScreen)
@@ -57,7 +76,8 @@ fun StudyHiveApp() {
             onLoginSuccess = {
                 backStack.clear()
                 currentScreen = Routes.DASHBOARD
-            }
+            },
+            authViewModel = authViewModel
         )
 
         Routes.SIGNUP -> SignupScreen(
@@ -65,12 +85,14 @@ fun StudyHiveApp() {
             onSignupSuccess = {
                 backStack.clear()
                 currentScreen = Routes.DASHBOARD
-            }
+            },
+            authViewModel = authViewModel
         )
 
         Routes.DASHBOARD -> DashboardScreen(
-            userName = "Alex",
+            userName = authenticatedUser?.displayName ?: "User",
             onLogout = {
+                authViewModel.signOut()
                 backStack.clear()
                 currentScreen = Routes.LOGIN
             },
@@ -81,6 +103,8 @@ fun StudyHiveApp() {
         )
 
         Routes.PROFILE -> ProfileScreen(
+            displayName = authenticatedUser?.displayName ?: authViewModel.displayName,
+            email = authenticatedUser?.email ?: authViewModel.email,
             onBack = { navigateBack() },
             onSecurityClick = { navigate(Routes.RESET_PASSWORD) }
         )
@@ -110,7 +134,8 @@ fun StudyHiveApp() {
 
         else -> LoginScreen(
             onShowSignup = { navigate(Routes.SIGNUP) },
-            onLoginSuccess = { currentScreen = Routes.DASHBOARD }
+            onLoginSuccess = { currentScreen = Routes.DASHBOARD },
+            authViewModel = authViewModel
         )
     }
 }

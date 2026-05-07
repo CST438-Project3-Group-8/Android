@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun ProfileScreen(
+    displayName: String,
+    email: String,
     onBack: () -> Unit,
     onSecurityClick: () -> Unit
 ) {
@@ -58,9 +60,9 @@ fun ProfileScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            ProfileHeaderCard()
+            ProfileHeaderCard(displayName)
             Spacer(modifier = Modifier.height(16.dp))
-            PersonalDetailsCard()
+            PersonalDetailsCard(displayName, email)
             Spacer(modifier = Modifier.height(16.dp))
             MyCoursesCard()
             Spacer(modifier = Modifier.height(16.dp))
@@ -90,7 +92,7 @@ private fun SidebarChip(icon: ImageVector, label: String, isSelected: Boolean, o
 }
 
 @Composable
-private fun ProfileHeaderCard() {
+private fun ProfileHeaderCard(displayName: String) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -110,7 +112,7 @@ private fun ProfileHeaderCard() {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("Alex Rivera", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
+                Text(displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0F172A))
                 Text("Computer Science", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("Senior CS student. I love building web apps and studying algorithms.", style = MaterialTheme.typography.bodySmall, color = Color(0xFF64748B), lineHeight = 18.sp)
@@ -124,7 +126,7 @@ private fun ProfileHeaderCard() {
 }
 
 @Composable
-private fun PersonalDetailsCard() {
+private fun PersonalDetailsCard(displayName: String, email: String) {
     Card(
         modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -136,8 +138,8 @@ private fun PersonalDetailsCard() {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Personal Details", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color(0xFF0F172A))
             }
-            ProfileFormField("Full Name", "Alex Rivera")
-            ProfileFormField("Email Address", "student@university.edu")
+            ProfileFormField("Full Name", displayName)
+            ProfileFormField("Email Address", email)
             ProfileFormField("Major / Program", "Computer Science")
             ProfileFormField("Bio", "Senior CS student. I love building web apps and studying algorithms. Always up for a late-night study session before finals!", singleLine = false, minLines = 3)
             Button(onClick = {}, modifier = Modifier.align(Alignment.End), shape = RoundedCornerShape(12.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))) {
