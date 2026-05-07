@@ -1,8 +1,22 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun configProperty(name: String, defaultValue: String = ""): String =
+    (project.findProperty(name) as? String)
+        ?: localProperties.getProperty(name)
+        ?: defaultValue
 
 android {
     namespace = "com.example.studyhive_android"
@@ -19,12 +33,16 @@ android {
         // ── Supabase / API config ──────────────────────────────────────────
         // Put your actual values in local.properties and read them here, or
         // hardcode for development. NEVER commit secrets to version control.
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
-        buildConfigField("String", "API_BASE_URL", "\"${project.findProperty("API_BASE_URL") ?: "https://api.studyhive.app/"}\"")
+        val supabaseUrl = configProperty("SUPABASE_URL").trimEnd('/')
+        val supabaseAnonKey = configProperty("SUPABASE_ANON_KEY")
+        val apiBaseUrl = configProperty("API_BASE_URL", "https://api.studyhive.app/")
 
-        manifestPlaceholders["supabaseUrl"] = project.findProperty("SUPABASE_URL") ?: ""
-        manifestPlaceholders["supabaseAnonKey"] = project.findProperty("SUPABASE_ANON_KEY") ?: ""
+        buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+
+        manifestPlaceholders["supabaseUrl"] = supabaseUrl
+        manifestPlaceholders["supabaseAnonKey"] = supabaseAnonKey
     }
 
     buildTypes {

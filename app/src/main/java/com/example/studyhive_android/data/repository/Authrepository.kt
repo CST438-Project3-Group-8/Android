@@ -10,6 +10,7 @@ import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -39,7 +40,11 @@ class AuthRepository {
 
     // ── Sign-in methods ─────────────────────────────────────────────────
 
-    suspend fun signInWithGoogle() { auth.signInWith(Google) }
+    suspend fun signInWithGoogle() {
+        auth.signInWith(Google) {
+            queryParams["prompt"] = "select_account"
+        }
+    }
 
     suspend fun signInWithGitHub() { auth.signInWith(Github) }
 
@@ -93,10 +98,13 @@ class AuthRepository {
 
     fun displayName(): String {
         val user = auth.currentUserOrNull() ?: return "User"
-        return (user.userMetadata?.get("full_name") as? String)?.takeIf { it.isNotBlank() }
+        return (user.userMetadata?.get("full_name") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+            ?: (user.userMetadata?.get("name") as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
             ?: user.email?.substringBefore('@')
             ?: "User"
     }
+
+    fun email(): String = auth.currentUserOrNull()?.email.orEmpty()
 
     fun currentUserId(): String? = auth.currentUserOrNull()?.id
 }

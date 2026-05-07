@@ -41,6 +41,8 @@ fun LoginScreen(
 
     val actionError by authViewModel.actionError.collectAsStateWithLifecycle()
     val authState   by authViewModel.authState.collectAsStateWithLifecycle()
+    val authError = actionError
+        ?: (authState as? AuthViewModel.AuthState.BootstrapError)?.message
 
     // Navigate when authenticated
     LaunchedEffect(authState) {
@@ -122,10 +124,10 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Error banner
-            if (actionError != null) {
+            if (authError != null) {
                 Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                     color = Color(0xFFFEF2F2)) {
-                    Text(text = actionError ?: "", modifier = Modifier.padding(12.dp),
+                    Text(text = authError ?: "", modifier = Modifier.padding(12.dp),
                         color = Color(0xFFDC2626), style = MaterialTheme.typography.bodySmall)
                 }
                 Spacer(modifier = Modifier.height(16.dp))

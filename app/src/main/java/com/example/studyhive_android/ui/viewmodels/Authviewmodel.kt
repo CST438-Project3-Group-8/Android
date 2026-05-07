@@ -5,10 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.studyhive_android.data.repository.AuthRepository
 import io.github.jan.supabase.auth.user.UserSession
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -32,7 +30,7 @@ class AuthViewModel(
         object Loading : AuthState()
         object Unauthenticated : AuthState()
         data class Bootstrapping(val session: UserSession) : AuthState()
-        data class Authenticated(val session: UserSession, val displayName: String) : AuthState()
+        data class Authenticated(val session: UserSession, val displayName: String, val email: String) : AuthState()
         data class BootstrapError(val session: UserSession, val message: String) : AuthState()
     }
 
@@ -41,6 +39,8 @@ class AuthViewModel(
 
     private val _actionError = MutableStateFlow<String?>(null)
     val actionError: StateFlow<String?> = _actionError.asStateFlow()
+
+    private var authStateVersion = 0
 
     init {
         observeSession()
@@ -51,23 +51,27 @@ class AuthViewModel(
     private fun observeSession() {
         viewModelScope.launch {
             repo.sessionFlow.collect { session ->
+                val version = ++authStateVersion
                 when {
                     session == null -> _authState.value = AuthState.Unauthenticated
-                    else            -> bootstrapWithSession(session)
+                    else            -> bootstrapWithSession(session, version)
                 }
             }
         }
     }
 
-    private suspend fun bootstrapWithSession(session: UserSession) {
+    private suspend fun bootstrapWithSession(session: UserSession, version: Int = authStateVersion) {
         _authState.value = AuthState.Bootstrapping(session)
         try {
             repo.bootstrapBackendProfile()
+            if (version != authStateVersion) return
             _authState.value = AuthState.Authenticated(
                 session = session,
-                displayName = repo.displayName()
+                displayName = repo.displayName(),
+                email = repo.email()
             )
         } catch (e: Exception) {
+            if (version != authStateVersion) return
             _authState.value = AuthState.BootstrapError(
                 session = session,
                 message = e.message ?: "Could not finish signing you in."
@@ -110,8 +114,12 @@ class AuthViewModel(
     }
 
     fun signOut() {
+        authStateVersion++
+        _actionError.value = null
+        _authState.value = AuthState.Unauthenticated
         viewModelScope.launch {
             runCatching { repo.signOut() }
+                .onFailure { _actionError.value = it.message ?: "Could not sign out." }
         }
     }
 
@@ -119,7 +127,7 @@ class AuthViewModel(
         val current = _authState.value
         if (current is AuthState.BootstrapError) {
             viewModelScope.launch {
-                bootstrapWithSession(current.session)
+                bootstrapWithSession(current.session, authStateVersion)
             }
         }
     }
@@ -132,6 +140,7 @@ class AuthViewModel(
 
     val currentUserId: String? get() = repo.currentUserId()
     val displayName:   String  get() = repo.displayName()
+    val email: String get() = repo.email()
     val isAuthenticated: Boolean
         get() = _authState.value is AuthState.Authenticated
 }

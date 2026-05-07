@@ -2,6 +2,7 @@ package com.example.studyhive_android.data.network
 
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.ExternalAuthAction
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.createSupabaseClient
 
@@ -44,6 +45,7 @@ object SupabaseClient {
                 // Authentication → URL Configuration → Redirect URLs
                 scheme = "studyhive"
                 host   = "login-callback"
+                defaultExternalAuthAction = ExternalAuthAction.CustomTabs()
             }
         }
     }
