@@ -2,7 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Required for all network calls to Supabase + Spring Boot API -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
+        android:name=".StudyHiveApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -11,6 +15,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.StudyHiveAndroid">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -18,8 +23,22 @@
             android:theme="@style/Theme.StudyHiveAndroid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Deep-link for Supabase OAuth redirect (Google / GitHub) -->
+            <!--
+                The scheme must match what you configure in your Supabase dashboard
+                under Authentication → URL Configuration → Redirect URLs.
+                Pattern: <your-app-scheme>://login-callback
+                e.g.   studyhive://login-callback
+            -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Change "studyhive" to whatever scheme you registered in Supabase -->
+                <data android:scheme="studyhive" android:host="login-callback" />
             </intent-filter>
         </activity>
     </application>
